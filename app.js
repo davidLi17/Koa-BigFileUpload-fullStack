@@ -2,6 +2,7 @@ const Koa = require("koa");
 const router = require("./routes");
 const koaStatic = require("koa-static");
 const path = require("path");
+const koaBody = require("koa-body").default;
 
 const app = new Koa();
 
@@ -28,7 +29,7 @@ app.use(async (ctx, next) => {
 		} - 完成 (${duration} ms)`
 	);
 });
-
+app.use(koaBody());
 app.use(router.routes()).use(router.allowedMethods());
 app.use(koaStatic(path.join(__dirname, "uploads")));
 

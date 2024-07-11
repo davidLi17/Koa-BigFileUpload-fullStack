@@ -21,6 +21,7 @@ router.get("/protected", auth, async (ctx) => {
 });
 // 6. 处理所有请求方法的参数
 router.all("/echo", async (ctx) => {
+	console.log(ctx.request.body); //没有包含这个中间件,所以无法进行对应的body赋值,麻了
 	ctx.body = {
 		method: ctx.method,
 		query: ctx.query,
