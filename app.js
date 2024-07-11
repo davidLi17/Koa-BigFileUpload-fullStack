@@ -1,20 +1,11 @@
 const Koa = require("koa");
-const Router = require("koa-router");
+const router = require("./routes");
+const koaStatic = require("koa-static");
+const path = require("path");
 
 const app = new Koa();
-const router = new Router();
 
-// 处理查询参数
-router.get("/search", async (ctx) => {
-	const query = ctx.query;
-	ctx.body = `You searched for: ${query.req}`;
-});
-
-// 处理路径参数
-router.get("/users/:id", async (ctx) => {
-	const id = ctx.params.id;
-	ctx.body = `User ID: ${id}`;
-});
+// 日志中间件
 app.use(async (ctx, next) => {
 	const start = new Date();
 	const formatter = new Intl.DateTimeFormat("zh-CN", {
@@ -27,10 +18,10 @@ app.use(async (ctx, next) => {
 	});
 	console.log(`${formatter.format(start)} - ${ctx.method} ${ctx.path} - 开始`);
 
-	await next(); // 等待后续中间件和路由处理完成
+	await next();
 
 	const end = new Date();
-	const duration = end.getTime() - start.getTime(); // 计算总时长（毫秒）
+	const duration = end.getTime() - start.getTime();
 	console.log(
 		`${formatter.format(end)} - ${ctx.method} ${
 			ctx.path
@@ -39,6 +30,7 @@ app.use(async (ctx, next) => {
 });
 
 app.use(router.routes()).use(router.allowedMethods());
+app.use(koaStatic(path.join(__dirname, "uploads")));
 
 app.listen(3000, () => {
 	console.log("Server is running on http://localhost:3000");
