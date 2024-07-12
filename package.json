@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "bun --watch app.js"
+    "dev": "bun --watch app.js",
+    "front":"vite --open"
   },
   "keywords": [],
   "author": "",
@@ -20,6 +21,7 @@
     "koa-bodyparser": "^4.4.1",
     "koa-router": "^12.0.1",
     "koa-static": "^5.0.0",
-    "sqlite3": "^5.1.7"
+    "sqlite3": "^5.1.7",
+    "vite": "^5.3.3"
   }
 }

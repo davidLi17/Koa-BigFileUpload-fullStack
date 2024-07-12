@@ -1,6 +1,9 @@
 const fs = require("fs"); // 引入文件系统模块
 const path = require("path"); // 引入路径模块
 const archiver = require("archiver"); // 引入压缩模块
+const util = require("util");
+const { pipeline } = require("stream");
+const pipelineAsync = util.promisify(pipeline);
 const { deleteFileAsync } = require("../utils/file"); // 引入删除文件的异步函数
 
 const uploadDir = path.join(__dirname, "../uploads"); // 设置上传文件目录路径
@@ -10,68 +13,55 @@ if (!fs.existsSync(uploadDir)) {
 }
 
 const upload = async (ctx) => {
-	const { files } = ctx.request; // 从请求中获取文件
-
-	const uploadedFiles = files.files; // 获取上传的文件数组
+	const { files } = ctx.request;
+	const uploadedFiles = files.files;
 
 	if (!uploadedFiles) {
 		ctx.throw(400, "No files provided");
 		return;
 	}
 
-	const filesArray = Array.isArray(uploadedFiles) // 处理单个文件和多个文件的情况
+	const filesArray = Array.isArray(uploadedFiles)
 		? uploadedFiles
 		: [uploadedFiles];
 
-	// filesArray.forEach((file) => {
-	// 	console.log({
-	// 		originalFilename: file.originalFilename,
-	// 		filepath: file.filepath,
-	// 		size: file.size,
-	// 		mimetype: file.mimetype,
-	// 		lastModifiedDate: file.lastModifiedDate,
-	// 		newFilename: file.newFilename,
-	// 		hash: file.hash,
-	// 	});
-	// });
+	// 设置 SSE 头
+	ctx.set({
+		"Content-Type": "text/event-stream",
+		"Cache-Control": "no-cache",
+		Connection: "keep-alive",
+	});
+
+	const sendProgress = (filename, progress) => {
+		ctx.res.write(`data: ${JSON.stringify({ filename, progress })}\n\n`);
+	};
 
 	for (const file of filesArray) {
-		const reader = fs.createReadStream(file.filepath); // 创建可读流
+		const reader = fs.createReadStream(file.filepath);
 		const stream = fs.createWriteStream(
 			path.join(uploadDir, file.originalFilename)
-		); // 创建可写流
+		);
 
-		// let uploadedSize = 0; // 已上传文件大小
-		// const totalSize = file.size; // 总文件大小
+		let uploadedSize = 0;
+		const totalSize = file.size;
 
-		// reader.on("data", (chunk) => {
-		// 	// 监听数据事件
-		// 	uploadedSize += chunk.length;
-		// 	const progress = ((uploadedSize / totalSize) * 100).toFixed(2);
-		// 	console.log(`File ${file.originalFilename} is % uploaded.`);
-		// });
-
-		stream.on("finish", () => {
-			// 监听写入完成事件
-			console.log(
-				`File ${file.originalFilename} has been written successfully`
-			);
+		reader.on("data", (chunk) => {
+			uploadedSize += chunk.length;
+			const progress = ((uploadedSize / totalSize) * 100).toFixed(2);
+			sendProgress(file.originalFilename, progress);
 		});
 
-		stream.on("error", (err) => {
-			// 监听错误事件
+		await pipelineAsync(reader, stream).catch((err) => {
 			console.error(`Error writing file ${file.originalFilename}:`, err);
+			sendProgress(file.originalFilename, -1); // 使用负值表示错误
 		});
 
-		reader.pipe(stream); // 将文件流写入
+		console.log(`File ${file.originalFilename} has been written successfully`);
+		sendProgress(file.originalFilename, 100);
 	}
 
-	ctx.body = {
-		message: "success",
-		files: `文件已上传: ${filesArray
-			.map((file) => file.originalFilename)
-			.join(", ")}`,
-	};
+	ctx.res.write("event: close\ndata: upload complete\n\n");
+	ctx.res.end();
 };
 
 const download = async (ctx) => {
