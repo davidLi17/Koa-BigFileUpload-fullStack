@@ -4,7 +4,7 @@ const db = require("../db");
 const SECRET_KEY = "LHG666";
 
 const register = async (ctx) => {
-	console.log(ctx.request.body);
+	// console.log(ctx.request.body);
 	const { username, password } = ctx.request.body;
 	const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -18,7 +18,10 @@ const register = async (ctx) => {
 			}
 		}
 	);
-	ctx.body = "User registered successfully";
+	ctx.body = {
+		username,
+		password,
+	};
 };
 
 const login = async (ctx) => {
@@ -38,7 +41,9 @@ const login = async (ctx) => {
 					ctx.body = "Invalid username or password";
 					resolve();
 				} else {
-					const token = jwt.sign({ username }, SECRET_KEY, { expiresIn: "1h" });
+					const token = jwt.sign({ username }, SECRET_KEY, {
+						expiresIn: "144h",
+					});
 					ctx.body = { message: "Login successful", token };
 					resolve();
 				}

@@ -7,8 +7,8 @@ const auth = require("./middlewares/auth");
 const router = new Router();
 
 // 用户路由
-router.post("/register", koaBody(), userController.register);
-router.post("/login", koaBody(), userController.login);
+router.post("/register", userController.register);
+router.post("/login", userController.login);
 
 // 文件路由
 router.post("/upload", koaBody({ multipart: true }), fileController.upload);
