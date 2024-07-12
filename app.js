@@ -29,10 +29,11 @@ app.use(async (ctx, next) => {
 		} - 完成 (${duration} ms)`
 	);
 });
+
 app.use(koaBody());
 app.use(router.routes()).use(router.allowedMethods());
 app.use(koaStatic(path.join(__dirname, "uploads")));
 
-app.listen(3000, () => {
-	console.log("Server is running on http://localhost:3000");
+app.listen(5000, () => {
+	console.log("Server is running on http://localhost:5000");
 });
