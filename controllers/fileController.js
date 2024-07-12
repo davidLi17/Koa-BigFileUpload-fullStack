@@ -23,17 +23,17 @@ const upload = async (ctx) => {
 		? uploadedFiles
 		: [uploadedFiles];
 
-	filesArray.forEach((file) => {
-		console.log({
-			originalFilename: file.originalFilename,
-			filepath: file.filepath,
-			size: file.size,
-			mimetype: file.mimetype,
-			lastModifiedDate: file.lastModifiedDate,
-			newFilename: file.newFilename,
-			hash: file.hash,
-		});
-	});
+	// filesArray.forEach((file) => {
+	// 	console.log({
+	// 		originalFilename: file.originalFilename,
+	// 		filepath: file.filepath,
+	// 		size: file.size,
+	// 		mimetype: file.mimetype,
+	// 		lastModifiedDate: file.lastModifiedDate,
+	// 		newFilename: file.newFilename,
+	// 		hash: file.hash,
+	// 	});
+	// });
 
 	for (const file of filesArray) {
 		const reader = fs.createReadStream(file.filepath); // 创建可读流
@@ -41,15 +41,15 @@ const upload = async (ctx) => {
 			path.join(uploadDir, file.originalFilename)
 		); // 创建可写流
 
-		let uploadedSize = 0; // 已上传文件大小
-		const totalSize = file.size; // 总文件大小
+		// let uploadedSize = 0; // 已上传文件大小
+		// const totalSize = file.size; // 总文件大小
 
-		reader.on("data", (chunk) => {
-			// 监听数据事件
-			uploadedSize += chunk.length;
-			const progress = ((uploadedSize / totalSize) * 100).toFixed(2);
-			console.log(`File ${file.originalFilename} is % uploaded.`);
-		});
+		// reader.on("data", (chunk) => {
+		// 	// 监听数据事件
+		// 	uploadedSize += chunk.length;
+		// 	const progress = ((uploadedSize / totalSize) * 100).toFixed(2);
+		// 	console.log(`File ${file.originalFilename} is % uploaded.`);
+		// });
 
 		stream.on("finish", () => {
 			// 监听写入完成事件
