@@ -1,6 +1,7 @@
 <template>
 	<div>
 		<h1>文件列表</h1>
+
 		<FileItem
 			v-for="file in files"
 			:key="file.name"

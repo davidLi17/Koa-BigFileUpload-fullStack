@@ -7,7 +7,7 @@
 <script setup>
 	import { ref, onMounted } from "vue";
 	import axios from "axios";
-	import FileList from "@/components/FileList.vue";
+	import FileList from "@/components/Files/FileList.vue";
 </script>
 
 <style scoped>
