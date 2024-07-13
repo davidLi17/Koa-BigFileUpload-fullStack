@@ -1,10 +1,11 @@
 <template>
 	<div class="file-item">
-		<h2>{{ file.name }}</h2>
+		<h2 class="green">{{ file.name }}</h2>
 		<p>文件大小: {{ formatSize(file.size) }}</p>
 		<p>最后修改时间: {{ formatDate(file.lastModified) }}</p>
 		<p>是否为目录: {{ file.isDirectory ? "是" : "否" }}</p>
 		<button
+			class="button"
 			@click="downloadFile(file.name)"
 			:disabled="file.isDirectory">
 			下载
@@ -63,7 +64,34 @@
 		padding: 10px;
 		margin: 10px 0;
 	}
-	button {
-		margin-top: 10px;
+	.green {
+		text-decoration: none;
+		color: hsla(160, 100%, 37%, 1);
+		transition: 0.4s;
+		padding: 3px;
+	}
+	.button {
+		display: inline-block;
+		padding: 10px 20px;
+		font-size: 16px;
+		font-weight: bold;
+		text-align: center;
+		text-decoration: none;
+		background-color: #4caf50;
+		color: white;
+		border-radius: 5px;
+		transition: background-color 0.3s ease;
+		/* 点击效果 */
+		cursor: pointer;
+	}
+
+	.button:hover {
+		background-color: #45a049;
+	}
+
+	.button:active {
+		background-color: #3e8e41;
+		box-shadow: 0 5px #666;
+		transform: translateY(4px);
 	}
 </style>

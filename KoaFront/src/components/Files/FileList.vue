@@ -1,11 +1,12 @@
 <template>
 	<div>
 		<h1>文件列表</h1>
-
-		<FileItem
-			v-for="file in files"
-			:key="file.name"
-			:file="file" />
+		<div class="container">
+			<FileItem
+				v-for="file in files"
+				:key="file.name"
+				:file="file" />
+		</div>
 	</div>
 </template>
 
@@ -30,5 +31,10 @@
 	h1 {
 		text-align: center;
 		margin-bottom: 20px;
+	}
+	.container {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+		grid-gap: 20px;
 	}
 </style>

@@ -6,7 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "bun --watch app.js",
-    "front":"vite --open"
+    "front":"vite --open --host"
   },
   "keywords": [],
   "author": "",
