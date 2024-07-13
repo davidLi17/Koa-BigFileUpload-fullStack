@@ -57,6 +57,8 @@
 
 <style scoped>
 	.file-item {
+		flex: 1 1 calc(33.33% - 1rem);
+		box-sizing: border-box;
 		border: 1px solid #ccc;
 		padding: 10px;
 		margin: 10px 0;
