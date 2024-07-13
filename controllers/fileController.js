@@ -13,14 +13,17 @@ if (!fs.existsSync(uploadDir)) {
 }
 
 const upload = async (ctx) => {
+	// 获取上传的文件
 	const { files } = ctx.request;
 	const uploadedFiles = files.files;
 
+	// 如果没有上传文件，则抛出错误
 	if (!uploadedFiles) {
 		ctx.throw(400, "No files provided");
 		return;
 	}
 
+	// 如果上传的文件是一个数组，则直接使用，否则将其转换为一个数组
 	const filesArray = Array.isArray(uploadedFiles)
 		? uploadedFiles
 		: [uploadedFiles];
@@ -32,36 +35,43 @@ const upload = async (ctx) => {
 		Connection: "keep-alive",
 	});
 
+	// 定义发送进度的函数
 	const sendProgress = (filename, progress) => {
 		ctx.res.write(`data: ${JSON.stringify({ filename, progress })}\n\n`);
 	};
 
+	// 遍历上传的文件
 	for (const file of filesArray) {
+		// 创建可读流
 		const reader = fs.createReadStream(file.filepath);
+		// 创建可写流
 		const stream = fs.createWriteStream(
 			path.join(uploadDir, file.originalFilename)
 		);
 
-		let uploadedSize = 0;
-		const totalSize = file.size;
+		let uploadedSize = 0; // 已上传的字节数
+		const totalSize = file.size; // 文件总大小
 
+		// 监听数据读取事件
 		reader.on("data", (chunk) => {
-			uploadedSize += chunk.length;
-			const progress = ((uploadedSize / totalSize) * 100).toFixed(2);
-			sendProgress(file.originalFilename, progress);
+			uploadedSize += chunk.length; // 更新已上传的字节数
+			const progress = ((uploadedSize / totalSize) * 100).toFixed(2); // 计算上传进度
+			sendProgress(file.originalFilename, progress); // 发送上传进度
 		});
 
+		// 异步写入文件
 		await pipelineAsync(reader, stream).catch((err) => {
-			console.error(`Error writing file ${file.originalFilename}:`, err);
+			console.error(`Error writing file ${file.originalFilename}:`, err); // 输出错误信息
 			sendProgress(file.originalFilename, -1); // 使用负值表示错误
 		});
 
-		console.log(`File ${file.originalFilename} has been written successfully`);
-		sendProgress(file.originalFilename, 100);
+		console.log(`File ${file.originalFilename} has been written successfully`); // 输出文件写入成功的消息
+		sendProgress(file.originalFilename, 100); // 发送上传完成的消息
 	}
 
+	// 发送上传完成的消息
 	ctx.res.write("event: close\ndata: upload complete\n\n");
-	ctx.res.end();
+	ctx.res.end(); // 结束响应
 };
 
 const download = async (ctx) => {
