@@ -1,14 +1,14 @@
 <template>
 	<h1>文件上传页面</h1>
 	<div>
-		<FileDownLoad></FileDownLoad>
+		<FileUpLoad></FileUpLoad>
 	</div>
 </template>
 
 <script setup>
 	import { ref, onMounted } from "vue";
 	import axios from "axios";
-	import FileDownLoad from "@/components/Files/FileDownLoad.vue";
+	import FileUpLoad from "@/components/Files/FileUpLoad.vue";
 </script>
 
 <style scoped>
