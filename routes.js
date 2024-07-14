@@ -15,6 +15,7 @@ router.post("/upload", koaBody({ multipart: true }), fileController.upload);
 router.get("/download/:filename", fileController.download);
 router.get("/download-multi", fileController.downloadMulti);
 router.get("/files", fileController.getFileList);
+router.post("/delete/:filename", fileController.deleteFile);
 
 // 受保护的路由示例
 router.get("/protected", auth, async (ctx) => {

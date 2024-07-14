@@ -10,13 +10,19 @@
 			:disabled="file.isDirectory">
 			下载
 		</button>
+		<button
+			class="button delete-button"
+			@click="deleteFile(file.name)"
+			:disabled="file.isDirectory">
+			删除
+		</button>
 	</div>
 </template>
 
 <script setup>
 	import { toRefs } from "vue";
 	import axios from "axios";
-
+	const emits = defineEmits(["fileDeleted"]);
 	const props = defineProps({
 		file: Object,
 	});
@@ -54,6 +60,24 @@
 			console.error("下载文件失败:", error);
 		}
 	};
+
+	const deleteFile = async (filename) => {
+		if (confirm("确定要删除文件吗？")) {
+			try {
+				const response = await axios.post(`/api/delete/${filename}`);
+				if (response.data.message === "success") {
+					// 通知父组件文件已被删除，以更新文件列表
+					emits("fileDeleted", filename);
+				} else {
+					console.error("删除文件失败:", response.data.message);
+				}
+			} catch (error) {
+				console.error("删除文件失败:", error);
+			}
+		} else {
+			console.log("取消删除文件", filename);
+		}
+	};
 </script>
 
 <style scoped>
@@ -81,8 +105,8 @@
 		color: white;
 		border-radius: 5px;
 		transition: background-color 0.3s ease;
-		/* 点击效果 */
 		cursor: pointer;
+		margin-right: 10px;
 	}
 
 	.button:hover {
@@ -93,5 +117,17 @@
 		background-color: #3e8e41;
 		box-shadow: 0 5px #666;
 		transform: translateY(4px);
+	}
+
+	.delete-button {
+		background-color: #f44336;
+	}
+
+	.delete-button:hover {
+		background-color: #d32f2f;
+	}
+
+	.delete-button:active {
+		background-color: #b71c1c;
 	}
 </style>

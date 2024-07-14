@@ -71,6 +71,7 @@ const upload = async (ctx) => {
 
 	// 发送上传完成的消息
 	ctx.res.write("event: close\ndata: upload complete\n\n");
+	ctx.body = "Upload complete successfully"; // 设置响应体内容为上传完成
 	ctx.res.end(); // 结束响应
 };
 
@@ -185,4 +186,31 @@ const getFileList = async (ctx) => {
 		};
 	}
 };
-module.exports = { upload, download, downloadMulti, getFileList }; // 导出上传、下载、批量下载和获取文件列表的方法
+const deleteFile = async (ctx) => {
+	const filename = ctx.params.filename; //获取文件名
+	const filePath = path.join(uploadDir, filename); //拼接文件路径
+
+	try {
+		if (fs.existsSync(filePath)) {
+			await fs.promises.unlink(filePath); //等待异步事件完成,删除文件
+			ctx.body = {
+				message: "success", //封装一个成功类,然后返回
+				filename: filename,
+			};
+		} else {
+			ctx.status = 404;
+			ctx.body = {
+				message: "File not found",
+				filename: filename,
+			};
+		}
+	} catch (error) {
+		console.error("Error deleting file:", error);
+		ctx.status = 500;
+		ctx.body = {
+			message: "Error deleting file",
+			error: error.message,
+		};
+	}
+};
+module.exports = { upload, download, downloadMulti, getFileList, deleteFile }; // 导出上传、下载、批量下载和获取文件列表的方法
