@@ -1,9 +1,6 @@
 <template>
 	<div>
-		<router-link to="/"></router-link>
-		<router-link to="/about"></router-link>
-	</div>
-	<div>
+		<NavigationBar />
 		<router-view></router-view>
 	</div>
 </template>
@@ -11,6 +8,7 @@
 <script setup>
 	import { ref, onMounted } from "vue";
 	import axios from "axios";
+	import NavigationBar from "@/components/NavigationBar.vue";
 
 	const files = ref([]);
 
