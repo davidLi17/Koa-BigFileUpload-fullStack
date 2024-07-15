@@ -16,9 +16,6 @@
 			:disabled="file.isDirectory">
 			删除
 		</button>
-		<div v-if="progress !== null">
-			<p>文件下载进度: {{ progress }}%</p>
-		</div>
 	</div>
 </template>
 
@@ -99,6 +96,7 @@
 		}
 	};
 </script>
+
 <style scoped>
 	.file-item {
 		flex: 1 1 calc(33.33% - 1rem);
