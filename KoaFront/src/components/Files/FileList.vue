@@ -20,7 +20,6 @@
 
 <script setup>
 	import { ref, onMounted } from "vue";
-	console.log("In FileList.vue  ::: ");
 	import axios from "axios";
 	import FileItem from "./FileItem.vue";
 
@@ -39,10 +38,10 @@
 		try {
 			const response = await axios.get("/api/files");
 			files.value = response.data.files;
-			console.log(
-				"In FileList.vue response.data.files::: ",
-				response.data.files
-			);
+			// console.log(
+			// 	"In FileList.vue response.data.files::: ",
+			// 	response.data.files
+			// );
 		} catch (error) {
 			console.error("获取文件列表失败:", error);
 		}
