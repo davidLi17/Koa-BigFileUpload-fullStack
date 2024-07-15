@@ -16,6 +16,9 @@
 			:disabled="file.isDirectory">
 			删除
 		</button>
+		<div v-if="progress !== null">
+			<p>文件下载进度: {{ progress }}%</p>
+		</div>
 	</div>
 </template>
 
@@ -28,6 +31,7 @@
 	});
 
 	const { file } = toRefs(props);
+	let progress = null;
 
 	const formatSize = (size) => {
 		const i = Math.floor(Math.log(size) / Math.log(1024));
@@ -43,22 +47,37 @@
 		return date.toLocaleString();
 	};
 
-	const downloadFile = async (filename) => {
-		try {
-			const response = await axios.get(`/api/download/${filename}`, {
-				responseType: "blob",
-			});
+	const downloadFile = (filename) => {
+		const xhr = new XMLHttpRequest();
+		xhr.open("GET", `/api/download/${filename}`, true);
+		xhr.responseType = "blob";
 
-			const url = window.URL.createObjectURL(new Blob([response.data]));
-			const link = document.createElement("a");
-			link.href = url;
-			link.setAttribute("download", filename);
-			document.body.appendChild(link);
-			link.click();
-			document.body.removeChild(link);
-		} catch (error) {
-			console.error("下载文件失败:", error);
-		}
+		xhr.onprogress = (event) => {
+			if (event.lengthComputable) {
+				progress = ((event.loaded / event.total) * 100).toFixed(2);
+			}
+		};
+
+		xhr.onload = () => {
+			if (xhr.status === 200) {
+				const url = window.URL.createObjectURL(new Blob([xhr.response]));
+				const link = document.createElement("a");
+				link.href = url;
+				link.setAttribute("download", filename);
+				document.body.appendChild(link);
+				link.click();
+				document.body.removeChild(link);
+				progress = null;
+			} else {
+				console.error("下载文件失败:", xhr.statusText);
+			}
+		};
+
+		xhr.onerror = () => {
+			console.error("下载文件失败:", xhr.statusText);
+		};
+
+		xhr.send();
 	};
 
 	const deleteFile = async (filename) => {
@@ -79,55 +98,3 @@
 		}
 	};
 </script>
-
-<style scoped>
-	.file-item {
-		flex: 1 1 calc(33.33% - 1rem);
-		box-sizing: border-box;
-		border: 1px solid #ccc;
-		padding: 10px;
-		margin: 10px 0;
-	}
-	.green {
-		text-decoration: none;
-		color: hsla(160, 100%, 37%, 1);
-		transition: 0.4s;
-		padding: 3px;
-	}
-	.button {
-		display: inline-block;
-		padding: 10px 20px;
-		font-size: 16px;
-		font-weight: bold;
-		text-align: center;
-		text-decoration: none;
-		background-color: #4caf50;
-		color: white;
-		border-radius: 5px;
-		transition: background-color 0.3s ease;
-		cursor: pointer;
-		margin-right: 10px;
-	}
-
-	.button:hover {
-		background-color: #45a049;
-	}
-
-	.button:active {
-		background-color: #3e8e41;
-		box-shadow: 0 5px #666;
-		transform: translateY(4px);
-	}
-
-	.delete-button {
-		background-color: #f44336;
-	}
-
-	.delete-button:hover {
-		background-color: #d32f2f;
-	}
-
-	.delete-button:active {
-		background-color: #b71c1c;
-	}
-</style>

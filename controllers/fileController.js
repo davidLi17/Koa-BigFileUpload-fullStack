@@ -100,27 +100,58 @@ const upload = async (ctx) => {
 		ctx.res.end(); // 结束响应
 	}
 };
-
 const download = async (ctx) => {
 	const filename = ctx.params.filename; // 获取文件名
 	const filePath = path.join(uploadDir, filename); // 拼接文件路径
 
-	if (fs.existsSync(filePath)) {
-		// 如果文件存在
-		const encodedFilename = encodeURIComponent(filename); // 对文件名进行编码
+	try {
+		if (fs.existsSync(filePath)) {
+			// 如果文件存在
+			const stat = fs.statSync(filePath);
+			const totalSize = stat.size;
+			const encodedFilename = encodeURIComponent(filename); // 对文件名进行编码
 
-		ctx.set("Content-Disposition", `attachment; filename="${encodedFilename}"`); // 设置响应头
-		ctx.set("Content-Type", "application/octet-stream"); // 设置内容类型
-		ctx.set("Content-Length", fs.statSync(filePath).size); // 设置内容长度
+			// 检查 Range 请求头
+			const range = ctx.headers["range"];
 
-		// 返回可读流
-		ctx.body = fs.createReadStream(filePath);
-	} else {
-		// 如果文件不存在
-		ctx.status = 404;
-		ctx.body = "File not found";
+			if (range) {
+				const parts = range.replace(/bytes=/, "").split("-");
+				const start = parseInt(parts[0], 10);
+				const end = parts[1] ? parseInt(parts[1], 10) : totalSize - 1;
+				const chunksize = end - start + 1;
+
+				ctx.status = 206; // Partial Content
+				ctx.set({
+					"Content-Range": `bytes ${start}-${end}/${totalSize}`,
+					"Accept-Ranges": "bytes",
+					"Content-Length": chunksize,
+					"Content-Type": "application/octet-stream",
+					"Content-Disposition": `attachment; filename="${encodedFilename}"`,
+				});
+
+				const stream = fs.createReadStream(filePath, { start, end }); //让可读流从start到end读取
+				ctx.body = stream;
+			} else {
+				ctx.set({
+					"Content-Disposition": `attachment; filename="${encodedFilename}"`,
+					"Content-Type": "application/octet-stream",
+					"Content-Length": totalSize,
+				});
+
+				ctx.body = fs.createReadStream(filePath);
+			}
+		} else {
+			// 如果文件不存在
+			ctx.status = 404;
+			ctx.body = "File not found";
+		}
+	} catch (err) {
+		ctx.status = 500;
+		ctx.body = "Internal server error";
+		console.error(err);
 	}
 };
+
 const downloadMulti = async (ctx) => {
 	const filenames = ctx.query.filenames.split(","); // 以逗号分隔的文件名
 	const zipFilename = `downloads-${Date.now()}.zip`; // 生成zip文件名
