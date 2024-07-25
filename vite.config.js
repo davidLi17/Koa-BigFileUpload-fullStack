@@ -10,11 +10,6 @@ export default defineConfig({
 				changeOrigin: true,
 				rewrite: (path) => path.replace(/^\/api/, ""),
 			},
-			// 单独处理上传请求
-			"/upload": {
-				target: "http://localhost:5321",
-				changeOrigin: true,
-			},
 		},
 	},
 });

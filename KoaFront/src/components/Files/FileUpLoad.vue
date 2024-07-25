@@ -60,6 +60,7 @@
 								class="progress"
 								:style="{ width: fileItem.progress + '%' }"></div>
 						</div>
+						<span>上传进度: {{ fileItem.progress }}%</span>
 						<button
 							class="remove-btn"
 							@click="removeFile(index)">
@@ -69,35 +70,55 @@
 				</li>
 			</ul>
 		</div>
-
-		<button
-			v-if="files.length > 0"
-			@click="uploadFiles"
-			class="upload-btn">
-			上传文件
-		</button>
+		<div class="btn-container">
+			<button
+				@click="resumeUpload"
+				class="upload-btn"
+				v-if="!isUploading && files.length > 0">
+				恢复上传
+			</button>
+			<button
+				v-if="files.length > 0"
+				@click="uploadFiles"
+				class="upload-btn">
+				上传文件
+			</button>
+		</div>
 	</div>
 </template>
 
 <script setup>
 	import { ref } from "vue";
+	import SparkMD5 from "spark-md5";
+	import axios from "axios";
 
+	const API_URL = "/api";
 	const files = ref([]);
 	const isDragActive = ref(false);
 	const fileInput = ref(null);
+	const CHUNK_SIZE = 20 * 1024 * 1024; // 20MB
 
+	const isUploading = ref(false);
+	const uploadStatus = ref({});
+
+	/**
+	 * @param {Event} event
+	 * @returns {void}
+	 * 当文件选择框的文件发生变化时，将新选择的文件添加到 files 数组中
+	 */
 	const handleFileChange = (event) => {
 		const newFiles = Array.from(event.target.files).map((file) => ({
 			file,
 			progress: 0,
 		}));
 		files.value = [...files.value, ...newFiles];
-		console.log(
-			"In FileUpLoad.vue files.value handleFileChange::: ",
-			files.value
-		);
 	};
 
+	/**
+	 * @param {Event} event
+	 * @returns {void}
+	 * 当文件拖拽到 drop-zone 区域时，将拖拽的文件添加到 files 数组中
+	 */
 	const handleDrop = (event) => {
 		isDragActive.value = false;
 		const droppedFiles = Array.from(event.dataTransfer.files).map((file) => ({
@@ -105,7 +126,6 @@
 			progress: 0,
 		}));
 		files.value = [...files.value, ...droppedFiles];
-		console.log("In FileUpLoad.vue files.value handleDrop::: ", files.value);
 	};
 
 	const toggleDragActive = () => {
@@ -117,6 +137,7 @@
 	};
 
 	const removeFile = (index) => {
+		isUploading.value = false;
 		files.value.splice(index, 1);
 	};
 
@@ -126,56 +147,233 @@
 		const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
 		const i = Math.floor(Math.log(bytes) / Math.log(k));
 		return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
-	}; //格式化文件大小, 1024字节为1KB, 1024KB为1MB, 1024MB为1GB, 1024GB为1TB,经典格式化代码.
+	};
 
-	const uploadFiles = async () => {
-		const formData = new FormData();
-		for (const { file } of files.value) {
-			formData.append("files", file);
-		}
+	/**
+	 * @param {File} file
+	 * @returns {Promise<string>}
+	 * 计算文件的 MD5 值
+	 */
+	const calculateMD5 = (file) => {
+		console.log("开始计算文件的 MD5 值");
+		return new Promise((resolve, reject) => {
+			const startTime = performance.now(); // 开始计时
 
-		try {
-			const response = await fetch("/upload", {
-				method: "POST",
-				body: formData,
-			});
+			const chunks = [];
+			const fileSize = file.size;
 
-			const reader = response.body.getReader();
-			const decoder = new TextDecoder();
+			// 读取前20MB
+			chunks.push(file.slice(0, CHUNK_SIZE));
 
-			const read = async () => {
-				const { done, value } = await reader.read();
-				if (done) return;
+			// 如果文件大小超过40MB，还要读取后20MB
+			if (fileSize > 2 * CHUNK_SIZE) {
+				chunks.push(file.slice(fileSize - CHUNK_SIZE));
+			}
 
-				const chunk = decoder.decode(value, { stream: true });
-				const lines = chunk.split("\n");
+			const worker = new Worker("md5Worker.js");
 
-				lines.forEach((line) => {
-					if (line.startsWith("data: ")) {
-						try {
-							const data = JSON.parse(line.slice(6));
-							updateProgress(data.filename, data.progress);
-						} catch (e) {
-							console.error("Invalid JSON:", line.slice(6));
-						}
-					}
-				});
-
-				read();
+			worker.onmessage = (e) => {
+				const { result } = e.data;
+				worker.terminate();
+				const endTime = performance.now(); // 结束计时
+				const duration = endTime - startTime; // 计算时间差
+				console.log(`MD5 计算耗时: ${duration} 毫秒`);
+				resolve(result);
 			};
 
-			read();
-		} catch (error) {
-			// console.error("Upload failed:", error);
+			worker.onerror = reject;
+
+			const readChunks = (index) => {
+				if (index >= chunks.length) {
+					worker.postMessage({ fileChunks: chunks });
+					return;
+				}
+
+				const reader = new FileReader();
+				reader.onload = (e) => {
+					chunks[index] = e.target.result;
+					readChunks(index + 1);
+				};
+				reader.onerror = reject;
+				reader.readAsArrayBuffer(chunks[index]);
+			};
+
+			readChunks(0);
+		});
+	};
+	/**
+	 * @param {Blob} chunk
+	 * @param {number} index
+	 * @param {string} fileId
+	 * @param {number} totalChunks
+	 * @param {string} fileName
+	 * @returns {Promise<Object>}
+	 * 上传单个文件块
+	 */
+	const uploadChunk = async (chunk, index, fileId, totalChunks, fileName) => {
+		const formData = new FormData();
+		formData.append("chunk", chunk);
+		formData.append("index", index);
+		formData.append("fileId", fileId);
+		formData.append("totalChunks", totalChunks);
+		formData.append("fileName", fileName);
+
+		const response = await axios.post(`${API_URL}/upload`, formData);
+		console.log("In FileUpLoad.vue uploadChunk response::: ", response.data);
+
+		if (response.status !== 200) {
+			throw new Error(`HTTP error! status: ${response.status}`);
+		}
+
+		return response.data;
+	};
+
+	/**
+	 * @param {File} file
+	 * @returns {Promise<void>}
+	 * 上传文件，支持断点续传
+	 */
+	const uploadFile = async (file) => {
+		isUploading.value = true;
+		const fileId = await calculateMD5(file);
+		const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+
+		// 获取已上传的块
+		let uploadedChunks = new Set(getSavedProgress(fileId));
+		console.log("In FileUpLoad.vue uploadedChunks::: ", uploadedChunks);
+
+		for (let i = 0; i < totalChunks; i++) {
+			if (uploadedChunks.has(i)) {
+				console.log(`Chunk ${i} already uploaded, skipping`);
+				updateProgress(file.name, ((i + 1) / totalChunks) * 100);
+				continue;
+			}
+
+			// 如果上传被暂停，退出循环
+			if (!isUploading.value) {
+				console.log("上传已暂停");
+				saveProgress(fileId, Array.from(uploadedChunks));
+				return;
+			}
+
+			const start = i * CHUNK_SIZE;
+			const end = Math.min(file.size, start + CHUNK_SIZE);
+			const chunk = file.slice(start, end);
+
+			try {
+				const result = await uploadChunk(
+					chunk,
+					i,
+					fileId,
+					totalChunks,
+					file.name
+				);
+				uploadedChunks.add(i);
+				saveProgress(fileId, Array.from(uploadedChunks));
+				updateProgress(file.name, result.progress);
+			} catch (error) {
+				console.error(`上传分块 ${i} 失败:`, error);
+				// 这里可以实现重试逻辑
+				throw error;
+			}
+		}
+
+		// 上传完成后，通知服务器合并文件
+		await axios.post(`${API_URL}/upload/complete`, {
+			fileId,
+			fileName: file.name,
+		});
+
+		clearProgress(fileId);
+		isUploading.value = false;
+	};
+	/**
+	 * @returns {Promise<void>}
+	 * 恢复上传所有文件
+	 * 从本地存储中获取已上传的块，然后继续上传
+	 */
+	const resumeUpload = async () => {
+		for (const fileItem of files.value) {
+			try {
+				await uploadFile(fileItem.file);
+			} catch (error) {
+				console.error(`恢复上传文件 ${fileItem.file.name} 失败:`, error);
+			}
+		}
+	};
+	/**
+	 * @returns {Promise<void>}
+	 * 上传所有文件
+	 */
+	const uploadFiles = async () => {
+		for (const fileItem of files.value) {
+			try {
+				await uploadFile(fileItem.file);
+			} catch (error) {
+				console.error(`上传文件 ${fileItem.file.name} 失败:`, error);
+			}
 		}
 	};
 
+	/**
+	 * @param {string} filename
+	 * @param {number} progress
+	 * @returns {void}
+	 * 更新指定文件的上传进度
+	 */
 	const updateProgress = (filename, progress) => {
 		const file = files.value.find((f) => f.file.name === filename);
 		if (file) {
 			file.progress = progress;
 		}
 	};
+
+	/**
+	 * @param {string} fileId
+	 * @returns {Promise<Object>}
+	 * 获取文件的上传进度
+	 */
+	async function getUploadProgress(fileId) {
+		try {
+			const response = await axios.get(`${API_URL}/upload-progress/${fileId}`);
+			return response.data;
+		} catch (error) {
+			console.error("Error getting upload progress:", error);
+			return { uploadedChunks: [] };
+		}
+	}
+
+	/**
+	 * @param {File} file
+	 * @returns {string}
+	 * 生成文件的唯一标识符
+	 */
+	function generateFileId(file) {
+		return `${file.name}-${file.size}-${file.lastModified}`;
+	}
+
+	/**
+	 * @param {string} fileId
+	 * @param {Array<number>} uploadedChunks
+	 * @returns {void}
+	 * 保存上传进度到本地存储
+	 */
+	function saveProgress(fileId, uploadedChunks) {
+		localStorage.setItem(fileId, JSON.stringify(uploadedChunks));
+	}
+
+	function getSavedProgress(fileId) {
+		const progress = localStorage.getItem(fileId);
+		return progress ? JSON.parse(progress) : [];
+	}
+	/**
+	 * @param {string} fileId
+	 * @returns {void}
+	 * 清除本地存储中的上传进度
+	 */
+	function clearProgress(fileId) {
+		localStorage.removeItem(fileId);
+	}
 </script>
 
 <style scoped>
@@ -316,5 +514,9 @@
 
 	.upload-btn:hover {
 		background-color: #45a049;
+	}
+	.btn-container {
+		display: flex;
+		justify-content: space-between;
 	}
 </style>
