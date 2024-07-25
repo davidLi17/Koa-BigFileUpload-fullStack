@@ -1,10 +1,10 @@
-(async () => {
-    const Koa = require("koa");
-    const router = require("./routes");
-    const koaStatic = require("koa-static");
-    const path = require("path");
-    const koaBody = require("koa-body");
-    const chalk = (await import("chalk")).default;
+
+const Koa = require("koa");
+const router = require("./routes");
+const koaStatic = require("koa-static");
+const path = require("path");
+const koaBody = require("koa-body").default;
+const chalk = require("chalk");
 
     const app = new Koa();
 
@@ -47,4 +47,4 @@
     app.listen(5321, () => {
         console.log(chalk.magenta("Server is running on http://localhost:5321"));
     });
-})();
+
