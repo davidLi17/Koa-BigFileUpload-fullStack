@@ -147,7 +147,7 @@ const download = async (ctx) => {
 				"Content-Disposition": `attachment; filename="${encodedFilename}"`,
 				"Content-Type": "application/octet-stream",
 				"Transfer-Encoding": "chunked",
-				"Content-Length": fileSize, // 发送文件大小
+				"X-File-Size": fileSize.toString(), // 添加自定义头来传递文件大小
 			});
 
 			ctx.body = fsSync.createReadStream(filePath);
