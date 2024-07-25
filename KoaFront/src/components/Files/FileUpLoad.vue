@@ -120,12 +120,15 @@
 	 * 当文件拖拽到 drop-zone 区域时，将拖拽的文件添加到 files 数组中
 	 */
 	const handleDrop = (event) => {
+		console.log("In FileUpLoad.vue event::: ", event);
 		isDragActive.value = false;
 		const droppedFiles = Array.from(event.dataTransfer.files).map((file) => ({
 			file,
 			progress: 0,
 		}));
+		console.log("In FileUpLoad.vue  droppedFiles::: ", droppedFiles);
 		files.value = [...files.value, ...droppedFiles];
+		console.log(files.value);
 	};
 
 	const toggleDragActive = () => {

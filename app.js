@@ -42,7 +42,15 @@ app.use(async (ctx, next) => {
 		console.log(chalk.green(endMessage)); // Green for success responses
 	}
 });
-
+app.use(async (ctx, next) => {
+	try {
+		await next();
+	} catch (err) {
+		ctx.status = err.status || 500;
+		ctx.body = { message: err.message };
+		console.error(chalk.red(`Error: ${err.message}`));
+	}
+});
 app.use(koaBody());
 app.use(router.routes()).use(router.allowedMethods());
 app.use(koaStatic(path.join(__dirname, "uploads")));
