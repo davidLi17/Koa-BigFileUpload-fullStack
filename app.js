@@ -3,7 +3,7 @@ const router = require("./routes");
 const koaStatic = require("koa-static");
 const path = require("path");
 const koaBody = require("koa-body").default;
-const chalk = require("chalk").default;
+const chalk = require("chalk");
 
 const app = new Koa();
 
