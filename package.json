@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "debug":"node app.js",
     "dev": "bun --watch app.js",
     "start": "pm2 start app.js -i 1",
     "front": "cd KoaFront && vite --host"

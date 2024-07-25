@@ -258,11 +258,11 @@
 				saveProgress(fileId, Array.from(uploadedChunks));
 				return;
 			}
-
+			//切片操作
 			const start = i * CHUNK_SIZE;
-			const end = Math.min(file.size, start + CHUNK_SIZE);
+			const end = Math.min(file.size, start + CHUNK_SIZE); //对小文件的处理
 			const chunk = file.slice(start, end);
-
+			//这才是写代码,上传分片后的chunk
 			try {
 				const result = await uploadChunk(
 					chunk,

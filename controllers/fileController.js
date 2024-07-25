@@ -37,7 +37,8 @@ const getUploadProgress = async (ctx) => {
  * @returns {Promise<void>}
  */
 const upload = async (ctx) => {
-	const { index, fileId, totalChunks } = ctx.request.body;
+	const { index, fileId, totalChunks, fileName } = ctx.request.body;
+	const chunkName = `${index}-${fileName}`;
 	const chunk = ctx.request.files.chunk;
 
 	if (!chunk) {
@@ -49,7 +50,7 @@ const upload = async (ctx) => {
 
 	try {
 		await fs.mkdir(chunkDir, { recursive: true });
-		const targetPath = path.join(chunkDir, index);
+		const targetPath = path.join(chunkDir, chunkName);
 
 		// Check if chunk already exists
 		if (
@@ -98,7 +99,13 @@ const completeUpload = async (ctx) => {
 
 	try {
 		const chunks = await fs.readdir(chunkDir);
-		chunks.sort((a, b) => Number(a) - Number(b));
+
+		// 新的排序逻辑
+		chunks.sort((a, b) => {
+			const indexA = parseInt(a.split("-")[0]); //根据-提取index
+			const indexB = parseInt(b.split("-")[0]);
+			return indexA - indexB;
+		});
 
 		await fs.writeFile(filePath, "");
 
@@ -117,7 +124,6 @@ const completeUpload = async (ctx) => {
 		ctx.body = { success: false, message: "Failed to complete upload" };
 	}
 };
-
 /**
  * 下载指定文件
  * @param {Object} ctx - Koa 上下文对象
