@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "bun --watch app.js"
+    "dev": "bun --watch app.js",
+    "start": "pm2 start app.js -i 1",
+    "front": "cd KoaFront && vite --host"
   },
   "keywords": [],
   "author": "",
@@ -14,12 +16,14 @@
     "archiver": "^7.0.1",
     "axios": "^1.7.2",
     "bcryptjs": "^2.4.3",
+    "chalk": "^5.3.0",
     "jsonwebtoken": "^9.0.2",
     "koa": "^2.15.3",
     "koa-body": "^6.0.1",
     "koa-bodyparser": "^4.4.1",
     "koa-router": "^12.0.1",
     "koa-static": "^5.0.0",
-    "sqlite3": "^5.1.7"
+    "sqlite3": "^5.1.7",
+    "vite": "^5.3.3"
   }
 }

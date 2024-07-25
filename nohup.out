@@ -1,0 +1,14 @@
+yarn run v1.22.22
+$ vite --open --host
+[33mThe CJS build of Vite's Node API is deprecated. See https://vitejs.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+
+  VITE v5.3.3  ready in 323 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: http://172.19.55.44:5173/
+  ➜  Network: http://172.18.0.1:5173/
+  ➜  Network: http://172.17.0.1:5173/
+Error: spawn xdg-open ENOENT
+    at ChildProcess._handle.onexit (node:internal/child_process:286:19)
+    at onErrorNT (node:internal/child_process:484:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:82:21)

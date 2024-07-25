@@ -12,10 +12,11 @@ router.post("/login", userController.login);
 
 // 文件路由
 router.post("/upload", koaBody({ multipart: true }), fileController.upload);
+router.post("/upload/complete", fileController.completeUpload);
 router.get("/download/:filename", fileController.download);
 router.get("/download-multi", fileController.downloadMulti);
 router.get("/files", fileController.getFileList);
-
+router.post("/delete/:filename", fileController.deleteFile);
 // 受保护的路由示例
 router.get("/protected", auth, async (ctx) => {
 	console.log(ctx.state.user);

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Upload with Progress</title>
+    <style>
+        .progress-bar {
+            width: 300px;
+            height: 20px;
+            background-color: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .progress {
+            height: 100%;
+            background-color: #4CAF50;
+            width: 0;
+            transition: width 0.5s;
+        }
+    </style>
+</head>
+
+<body>
+    <input type="file" id="fileInput" multiple>
+    <button onclick="uploadFiles()">Upload</button>
+    <div id="progressContainer"></div>
+
+    <script>
+        function uploadFiles() {
+            const fileInput = document.getElementById('fileInput');
+            const progressContainer = document.getElementById('progressContainer');
+            const formData = new FormData();
+
+            for (const file of fileInput.files) {
+                formData.append('files', file);
+            }
+
+            // 清除之前的进度条
+            progressContainer.innerHTML = '';
+
+            // 创建进度条
+            for (const file of fileInput.files) {
+                const progressBar = document.createElement('div');
+                progressBar.className = 'progress-bar';
+                progressBar.innerHTML = `<div class="progress" id="progress-${file.name}"></div>`;
+                const label = document.createElement('div');
+                label.textContent = file.name;
+                progressContainer.appendChild(label);
+                progressContainer.appendChild(progressBar);
+            }
+
+            // 发送请求
+            fetch('/api/upload', {
+                method: 'POST',
+                body: formData
+            }).then(response => {
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+
+                function read() {
+                    reader.read().then(({ done, value }) => {
+                        if (done) {
+                            console.log('Upload completed');
+                            return;
+                        }
+
+                        const chunk = decoder.decode(value, { stream: true });
+                        const lines = chunk.split('\n');
+
+                        lines.forEach(line => {
+                            if (line.startsWith('data: ')) {
+                                const data = JSON.parse(line.slice(6));
+                                updateProgress(data.filename, data.progress);
+                            }
+                        });
+
+                        read();
+                    });
+                }
+
+                read();
+            }).catch(error => {
+                console.error('Upload failed:', error);
+            });
+        }
+
+        function updateProgress(filename, progress) {
+            const progressBar = document.getElementById(`progress-${filename}`);
+            if (progressBar) {
+                progressBar.style.width = `${progress}%`;
+            }
+        }
+    </script>
+</body>
+
+</html>
