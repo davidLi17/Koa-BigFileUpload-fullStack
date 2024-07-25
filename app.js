@@ -3,11 +3,11 @@ const router = require("./routes");
 const koaStatic = require("koa-static");
 const path = require("path");
 const koaBody = require("koa-body").default;
-const chalk = require("chalk").default;
+const chalk = require("chalk");
 
 const app = new Koa();
 
-// 日志中间件,使用chalk对日志进行颜色标记
+// 日志中间件
 app.use(async (ctx, next) => {
 	const start = new Date();
 	const formatter = new Intl.DateTimeFormat("zh-CN", {
@@ -33,24 +33,16 @@ app.use(async (ctx, next) => {
 	} - 完成 (${duration} ms)`;
 
 	if (ctx.status >= 500) {
-		console.log(chalk.red(endMessage)); // Red for server errors
+		console.log(chalk.red(endMessage));
 	} else if (ctx.status >= 400) {
-		console.log(chalk.yellow(endMessage)); // Yellow for client errors
+		console.log(chalk.yellow(endMessage));
 	} else if (ctx.status >= 300) {
-		console.log(chalk.cyan(endMessage)); // Cyan for redirections
+		console.log(chalk.cyan(endMessage));
 	} else {
-		console.log(chalk.green(endMessage)); // Green for success responses
+		console.log(chalk.green(endMessage));
 	}
 });
-app.use(async (ctx, next) => {
-	try {
-		await next();
-	} catch (err) {
-		ctx.status = err.status || 500;
-		ctx.body = { message: err.message };
-		console.error(chalk.red(`Error: ${err.message}`));
-	}
-});
+
 app.use(koaBody());
 app.use(router.routes()).use(router.allowedMethods());
 app.use(koaStatic(path.join(__dirname, "uploads")));
