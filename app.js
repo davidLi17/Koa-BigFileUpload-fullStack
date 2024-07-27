@@ -19,10 +19,10 @@ app.use(async (ctx, next) => {
 		second: "2-digit",
 	});
 
-	// const startMessage = `${formatter.format(start)} - ${ctx.method} ${
-	// 	ctx.path
-	// } - 开始`;
-	// console.log(chalk.blue(startMessage));
+	const startMessage = `${formatter.format(start)} - ${ctx.method} ${
+		ctx.path
+	} - 开始`;
+	console.log(chalk.blue(startMessage));
 
 	await next();
 

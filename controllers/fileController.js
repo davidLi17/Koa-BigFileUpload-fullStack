@@ -141,27 +141,34 @@ const completeUpload = async (ctx) => {
 	}
 };
 const download = async (ctx) => {
-	// 获取请求中的文件名参数
-	const filename = ctx.params.filename;
+	// 获取请求中的文件名参数并进行解码
+	const filename = decodeURIComponent(ctx.params.filename);
 	// 构造文件的完整路径
 	const filePath = path.join(uploadDir, filename);
 
 	try {
 		// 检查文件是否存在
-		if (
-			await fs
-				.access(filePath) // 尝试访问文件
-				.then(() => true) // 如果文件存在，返回 true
-				.catch(() => false) // 如果文件不存在，返回 false
-		) {
-			// 获取文件的元信息，包括大小等
+		const fileExists = await fs
+			.access(filePath)
+			.then(() => true)
+			.catch(() => false);
+
+		if (fileExists) {
 			const stats = await fs.stat(filePath);
 
-			// 如果请求头中没有 Range 字段，意味着是常规下载请求
 			if (!ctx.headers.range) {
 				// 设置下载文件的响应头
-				ctx.set("Content-Disposition", `attachment; filename="${filename}"`); // 触发文件下载
-				ctx.set("Content-Length", stats.size); // 设置文件大小
+				const encodedFilename = encodeURIComponent(filename).replace(
+					/'/g,
+					"%27"
+				); // 编码文件名并替换单引号
+
+				// 添加文件名的处理，确保有正确的文件名格式
+				ctx.set(
+					"Content-Disposition",
+					`attachment; filename="${encodedFilename}"; filename*=UTF-8''${encodedFilename}`
+				);
+				ctx.set("Content-Length", stats.size);
 				ctx.body = fsSync.createReadStream(filePath); // 创建文件读取流，并将其赋值给响应体
 			} else {
 				// 处理断点续传
