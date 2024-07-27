@@ -30,7 +30,23 @@ const getUploadProgress = async (ctx) => {
 		ctx.body = { success: false, message: "No upload progress found" };
 	}
 };
+/**
+ * Get file size
+ * @param {Object} ctx - Koa context object
+ * @returns {Promise<void>}
+ */
+const getFileSize = async (ctx) => {
+	const filename = ctx.params.filename;
+	const filePath = path.join(uploadDir, filename);
 
+	try {
+		const stats = await fs.stat(filePath);
+		ctx.body = stats.size.toString();
+	} catch (err) {
+		ctx.status = 404;
+		ctx.body = "File not found";
+	}
+};
 /**
  * 上传文件块
  * @param {Object} ctx - Koa 上下文对象
@@ -124,54 +140,66 @@ const completeUpload = async (ctx) => {
 		ctx.body = { success: false, message: "Failed to complete upload" };
 	}
 };
-/**
- * 下载指定文件
- * @param {Object} ctx - Koa 上下文对象
- * @returns {Promise<void>}
- */
 const download = async (ctx) => {
+	// 获取请求中的文件名参数
 	const filename = ctx.params.filename;
+	// 构造文件的完整路径
 	const filePath = path.join(uploadDir, filename);
 
-	async function getFileInfo(file) {
-		const { size, mtime } = await fs.stat(file);
-		const timestamp = Number(mtime);
-		return { size, timestamp };
-	}
-
 	try {
+		// 检查文件是否存在
 		if (
 			await fs
-				.access(filePath)
-				.then(() => true)
-				.catch(() => false)
+				.access(filePath) // 尝试访问文件
+				.then(() => true) // 如果文件存在，返回 true
+				.catch(() => false) // 如果文件不存在，返回 false
 		) {
-			const { size: fileSize, timestamp } = await getFileInfo(filePath);
-			const encodedFilename = encodeURIComponent(filename);
+			// 获取文件的元信息，包括大小等
+			const stats = await fs.stat(filePath);
 
-			ctx.set({
-				"Content-Disposition": `attachment; filename="${encodedFilename}"`,
-				"Content-Type": "application/octet-stream",
-				"Transfer-Encoding": "chunked",
-				"X-File-Size": fileSize.toString(), // 添加自定义头来传递文件大小
-			});
+			// 如果请求头中没有 Range 字段，意味着是常规下载请求
+			if (!ctx.headers.range) {
+				// 设置下载文件的响应头
+				ctx.set("Content-Disposition", `attachment; filename="${filename}"`); // 触发文件下载
+				ctx.set("Content-Length", stats.size); // 设置文件大小
+				ctx.body = fsSync.createReadStream(filePath); // 创建文件读取流，并将其赋值给响应体
+			} else {
+				// 处理断点续传
+				const range = ctx.headers.range; // 获取 Range 请求头
+				const [start, end] = range.replace(/bytes=/, "").split("-"); // 解析起始和结束字节
+				const fileStart = parseInt(start, 10); // 将起始字节转换为整数
+				const fileEnd = end ? parseInt(end, 10) : stats.size - 1; // 计算结束字节，若未提供则默认为文件末尾
+				const chunkSize = fileEnd - fileStart + 1; // 计算当前请求的字节大小
 
-			ctx.body = fsSync.createReadStream(filePath);
-			ctx.body.highWaterMark = 64 * 1024; // 64KB chunks
+				// 设置状态码为206，指示局部内容
+				ctx.status = 206;
+				// 设置 Content-Range 响应头，指示实际发送的字节范围
+				ctx.set("Content-Range", `bytes ${fileStart}-${fileEnd}/${stats.size}`);
+				ctx.set("Accept-Ranges", "bytes"); // 指示支持字节范围请求
+				ctx.set("Content-Length", chunkSize); // 设置当前发送的内容长度
+				ctx.set("Content-Type", "application/octet-stream"); // 指定内容类型为二进制流
+
+				// 创建文件读取流，并限制读取的字节范围
+				ctx.body = fsSync.createReadStream(filePath, {
+					start: fileStart,
+					end: fileEnd,
+				});
+			}
 		} else {
+			// 如果文件不存在，设置响应状态为404并返回错误信息
 			ctx.status = 404;
-			ctx.body = "文件未找到";
+			ctx.body = "File not found";
 		}
 	} catch (err) {
+		// 处理异常情况，设置响应状态为500并返回错误信息
 		ctx.status = 500;
-		ctx.body = "服务器内部错误";
-		console.error(err);
+		ctx.body = "Internal server error";
+		console.error(err); // 控制台输出错误信息
 	}
 };
-
 /**
- * 下载多个文件并将它们打包为 ZIP 文件
- * @param {Object} ctx - Koa 上下文对象
+ * Download multiple files and package them as a ZIP file
+ * @param {Object} ctx - Koa context object
  * @returns {Promise<void>}
  */
 const downloadMulti = async (ctx) => {
@@ -212,7 +240,7 @@ const downloadMulti = async (ctx) => {
 		) {
 			archive.file(filePath, { name: filename });
 		} else {
-			console.warn(`文件未找到: ${filename}`);
+			console.warn(`File not found: ${filename}`);
 		}
 	}
 
@@ -301,4 +329,5 @@ module.exports = {
 	getFileList,
 	deleteFile,
 	getUploadProgress,
+	getFileSize,
 };

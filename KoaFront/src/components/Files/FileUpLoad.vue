@@ -1,12 +1,15 @@
 <template>
-	<div class="file-upload-container">
+	<div
+		class="file-upload-container"
+		@paste.prevent="handlePaste">
 		<div
 			class="drop-zone"
 			@dragenter.prevent="toggleDragActive"
 			@dragleave.prevent="toggleDragActive"
 			@dragover.prevent
 			@drop.prevent="handleDrop"
-			:class="{ 'drag-active': isDragActive }">
+			:class="{ 'drag-active': isDragActive }"
+			tabindex="0">
 			<input
 				type="file"
 				ref="fileInput"
@@ -30,7 +33,7 @@
 						x2="12"
 						y2="15" />
 				</svg>
-				<p>拖拽文件到这里，或者点击选择文件</p>
+				<p>拖拽文件到这里，点击选择文件，或粘贴文件</p>
 				<button
 					class="select-files-btn"
 					@click="triggerFileInput">
@@ -89,7 +92,6 @@
 
 <script setup>
 	import { ref } from "vue";
-	import SparkMD5 from "spark-md5";
 	import axios from "axios";
 	import { calculateMD5, formatFileSize } from "@/utils/files.js";
 	import Config from "@/config/config";
@@ -103,6 +105,31 @@
 
 	const isUploading = ref(false);
 
+	/**
+	 * @param {ClipboardEvent} event
+	 * @returns {void}
+	 * 处理粘贴事件，将粘贴的文件添加到 files 数组中
+	 */
+	const handlePaste = (event) => {
+		console.log(`粘贴事件:`, event);
+		const clipboardItems = event.clipboardData.items;
+		const pastedFiles = [];
+
+		for (let i = 0; i < clipboardItems.length; i++) {
+			if (clipboardItems[i].kind === "file") {
+				const file = clipboardItems[i].getAsFile();
+				pastedFiles.push({
+					file,
+					progress: 0,
+				});
+			}
+		}
+
+		if (pastedFiles.length > 0) {
+			files.value = [...files.value, ...pastedFiles];
+			console.log("Files pasted:", pastedFiles);
+		}
+	};
 	/**
 	 * @param {Event} event
 	 * @returns {void}
@@ -251,6 +278,9 @@
 	 * 上传所有文件
 	 */
 	const uploadFiles = async () => {
+		files.value.forEach((file) => {
+			console.log("In FileUpLoad.vue file::: ", generateFileId(file.file));
+		});
 		for (const fileItem of files.value) {
 			try {
 				await uploadFile(fileItem.file);
@@ -294,7 +324,7 @@
 	 * 生成文件的唯一标识符
 	 */
 	function generateFileId(file) {
-		return `${file.name}-${file.size}-${file.lastModified}`;
+		return `${file.name}-${file.size}Bytes-${file.lastModified}-timestamp`;
 	}
 
 	/**

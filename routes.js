@@ -14,6 +14,7 @@ router.post("/login", userController.login);
 router.post("/upload", koaBody({ multipart: true }), fileController.upload);
 router.post("/upload/complete", fileController.completeUpload);
 router.get("/download/:filename", fileController.download);
+router.get("/file-size/:filename", fileController.getFileSize);
 router.get("/download-multi", fileController.downloadMulti);
 router.get("/files", fileController.getFileList);
 router.post("/delete/:filename", fileController.deleteFile);
