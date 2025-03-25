@@ -117,7 +117,26 @@ const completeUpload = async (ctx) => {
 		}
 
 		await fs.rmdir(chunkDir);
-		ctx.body = { success: true, message: "File upload completed" };
+
+		// 获取文件信息
+		const stats = await fs.stat(filePath);
+
+		// 将文件信息保存到数据库
+		const fileRecord = await prisma.file.create({
+			data: {
+				filename: fileName,
+				path: filePath,
+				size: stats.size,
+				mimeType: ctx.request.body.mimeType || null,
+				userId: ctx.state.user.userId, // 假设用户ID存储在JWT中
+			},
+		});
+
+		ctx.body = {
+			success: true,
+			message: "File upload completed",
+			file: fileRecord
+		};
 	} catch (error) {
 		console.error("Error completing upload:", error);
 		ctx.status = 500;
@@ -226,27 +245,21 @@ const downloadMulti = async (ctx) => {
  */
 const getFileList = async (ctx) => {
 	try {
-		const files = await fs.readdir(uploadDir);
-
-		const filePromises = files.map(async (file) => {
-			const filePath = path.join(uploadDir, file);
-			const stats = await fs.stat(filePath);
-			return {
-				name: file,
-				size: stats.size,
-				lastModified: stats.mtime,
-				isDirectory: stats.isDirectory(),
-			};
+		const files = await prisma.file.findMany({
+			where: {
+				userId: ctx.state.user.userId,
+			},
+			orderBy: {
+				uploadedAt: 'desc',
+			},
 		});
-
-		const fileList = await Promise.all(filePromises);
 
 		ctx.body = {
 			message: "success",
-			files: fileList,
+			files: files,
 		};
 	} catch (error) {
-		console.error("读取目录时出错:", error);
+		console.error("读取文件列表时出错:", error);
 		ctx.status = 500;
 		ctx.body = {
 			message: "读取文件列表出错",
@@ -265,24 +278,23 @@ const deleteFile = async (ctx) => {
 	const filePath = path.join(uploadDir, filename);
 
 	try {
-		if (
-			await fs
-				.access(filePath)
-				.then(() => true)
-				.catch(() => false)
-		) {
+		// 从数据库中删除文件记录
+		await prisma.file.deleteMany({
+			where: {
+				filename: filename,
+				userId: ctx.state.user.userId,
+			},
+		});
+
+		// 删除物理文件
+		if (await fs.access(filePath).then(() => true).catch(() => false)) {
 			await fs.unlink(filePath);
-			ctx.body = {
-				message: "success",
-				filename: filename,
-			};
-		} else {
-			ctx.status = 404;
-			ctx.body = {
-				message: "文件未找到",
-				filename: filename,
-			};
 		}
+
+		ctx.body = {
+			message: "success",
+			filename: filename,
+		};
 	} catch (error) {
 		console.error("删除文件时出错:", error);
 		ctx.status = 500;

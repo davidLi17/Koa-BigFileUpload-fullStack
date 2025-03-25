@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "debug":"node app.js",
+    "debug": "node app.js",
     "dev": "bun --watch app.js",
     "start": "pm2 start app.js -i 1",
     "front": "cd KoaFront && vite --host --open"
@@ -14,6 +14,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@koa/cors": "^5.0.0",
+    "@prisma/client": "^6.5.0",
     "archiver": "^7.0.1",
     "axios": "^1.7.2",
     "bcryptjs": "^2.4.3",
@@ -24,6 +26,7 @@
     "koa-bodyparser": "^4.4.1",
     "koa-router": "^12.0.1",
     "koa-static": "^5.0.0",
+    "prisma": "^6.5.0",
     "sqlite3": "^5.1.7",
     "vite": "^5.3.3"
   }
